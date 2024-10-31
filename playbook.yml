@@ -1,0 +1,88 @@
+---
+- name: PSQL 16
+  hosts: db11
+  become: yes
+  vars:
+    DB_USER: "dbuser"
+    DB_PASSWORD: "1"
+    DB_DATABASE: "testbase"
+    DB_TABLE: "table"
+  tasks:
+    - name: Set timezone to Europe/Moscow
+      timezone:
+        name: Europe/Moscow
+
+    - name: Full Update
+      apt:
+        update_cache: yes
+        name: "*"
+        state: latest
+
+    - name: Install deps
+      apt:
+        name:
+          - curl
+          - gnupg
+          - ufw
+          - postgresql-common
+        state: present
+
+    - name: Ensure UFW is enabled
+      ufw:
+        state: disabled
+
+
+    - name: Add repos
+      command: sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+
+    - name: Update cache
+      apt:
+        update_cache: yes
+
+    - name: Install PostgreSQL 16
+      apt:
+        name: postgresql-16
+        state: present
+
+    - name: Configure PostgreSQL to listen on all IPs
+      lineinfile:
+        path: /etc/postgresql/16/main/postgresql.conf
+        regexp: "^#?listen_addresses"
+        line: "listen_addresses = '*'"
+        state: present
+
+    - name: Configure PostgreSQL client authentication for specific IP
+      lineinfile:
+        path: /etc/postgresql/16/main/pg_hba.conf
+        line: "host    all     all     192.168.1.134/32    md5"
+        state: present
+
+    - name: Create user
+      command: sudo -u postgres psql -c "CREATE USER {{DB_USER}} WITH PASSWORD '{{DB_PASSWORD}}';"
+
+    - name: Execute SQL script to create database
+      command: sudo -u postgres psql -c "CREATE DATABASE {{DB_DATABASE}} OWNER {{DB_USER}};"
+
+    - name: Execute SQL script to create table
+      command: sudo -u postgres psql -c "CREATE TABLE IF NOT EXISTS users (ID SERIAL PRIMARY KEY, phone VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL);"
+
+    - name: Перезапуск службы PostgreSQL
+      systemd:
+        name: postgresql
+        state: restarted
+
+    - name: Allow SSH and PostgreSQL access through UFW
+      ufw:
+        rule: allow
+        name: ssh
+
+    - name: Allow PostgreSQL access for specific IP
+      ufw:
+        rule: allow
+        from_ip: 203.0.113.4
+        to_port: 5432
+        proto: tcp
+
+    - name: Ensure UFW is enabled
+      ufw:
+        state: enabled

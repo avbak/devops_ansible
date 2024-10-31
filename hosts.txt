@@ -1,0 +1,2 @@
+[postgres_servers]
+db11 ansible_host=192.168.144 ansible_user=root ansible_ssh_pass=1
