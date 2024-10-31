@@ -51,7 +51,7 @@
         line: "listen_addresses = '*'"
         state: present
 
-    - name: Configure PostgreSQL client authentication for specific IP
+    - name: Configure PostgreSQL client auth
       lineinfile:
         path: /etc/postgresql/16/main/pg_hba.conf
         line: "host    all     all     192.168.1.134/32    md5"
@@ -60,26 +60,26 @@
     - name: Create user
       command: sudo -u postgres psql -c "CREATE USER {{DB_USER}} WITH PASSWORD '{{DB_PASSWORD}}';"
 
-    - name: Execute SQL script to create database
+    - name: Create DB
       command: sudo -u postgres psql -c "CREATE DATABASE {{DB_DATABASE}} OWNER {{DB_USER}};"
 
-    - name: Execute SQL script to create table
+    - name: Create table
       command: sudo -u postgres psql -c "CREATE TABLE IF NOT EXISTS users (ID SERIAL PRIMARY KEY, phone VARCHAR(100) NOT NULL, email VARCHAR(100) NOT NULL);"
 
-    - name: Перезапуск службы PostgreSQL
+    - name: Restart PostgreSQL
       systemd:
         name: postgresql
         state: restarted
 
-    - name: Allow SSH and PostgreSQL access through UFW
+    - name: Allow SSH 
       ufw:
         rule: allow
         name: ssh
 
-    - name: Allow PostgreSQL access for specific IP
+    - name: Allow PostgreSQL 
       ufw:
         rule: allow
-        from_ip: 203.0.113.4
+        from_ip: 192.168.111.2
         to_port: 5432
         proto: tcp
 
